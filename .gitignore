@@ -29,3 +29,10 @@ docker-data/
 
 # Generated files
 reports/generated/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Database backups
+backups/
