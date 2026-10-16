@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory | Quản lý kho hàng</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">▦ INVENTORY</div>
+    <p class="nav-label">QUẢN LÝ KHO</p>
+    <button class="nav active" data-page="dashboard">▦ Tổng quan</button>
+    <button class="nav" data-page="products">▤ Sản phẩm</button>
+    <button class="nav" data-page="imports">＋ Nhập kho</button>
+    <button class="nav" data-page="exports">− Xuất kho</button>
+    <button class="nav" data-page="history">◷ Lịch sử giao dịch</button>
+    <p class="nav-label">HỆ THỐNG</p>
+    <a class="nav link" href="http://localhost:3000" target="_blank"
+       rel="noopener noreferrer">◉ Giám sát Grafana ↗</a>
+    <a class="nav link" href="http://localhost:9090" target="_blank"
+       rel="noopener noreferrer">◉ Prometheus ↗</a>
+    <div class="sidebar-footer">Inventory Management System</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">HỆ THỐNG QUẢN LÝ KHO HÀNG</p>
+        <h1 id="page-title">Tổng quan</h1>
+      </div>
+      <span class="status"><i></i> Ứng dụng kho hàng</span>
+    </header>
+
+    <section id="dashboard-page" class="page">
+      <div class="welcome">
+        <div>
+          <p class="eyebrow light">INVENTORY OVERVIEW</p>
+          <h2>Xin chào! Chào mừng đến với kho hàng.</h2>
+          <p>Theo dõi sản phẩm và tình hình tồn kho tại một nơi.</p>
+        </div>
+        <span class="welcome-icon">▦</span>
+      </div>
+      <div class="stats">
+        <article class="stat-card">
+          <span class="stat-icon blue">▤</span>
+          <p>Tổng sản phẩm</p><strong id="total-products">—</strong>
+          <small>Mặt hàng đang quản lý</small>
+        </article>
+        <article class="stat-card">
+          <span class="stat-icon green">▦</span>
+          <p>Tổng lượng tồn</p><strong id="total-quantity">—</strong>
+          <small>Tổng số đơn vị trong kho</small>
+        </article>
+        <article class="stat-card">
+          <span class="stat-icon orange">⚠</span>
+          <p>Sắp hết hàng</p><strong id="low-stock">—</strong>
+          <small>Đạt hoặc dưới mức tồn tối thiểu</small>
+        </article>
+        <article class="stat-card">
+          <span class="stat-icon purple">₫</span>
+          <p>Giá trị tồn kho</p><strong id="stock-value">—</strong>
+          <small>Tính theo giá nhập</small>
+        </article>
+      </div>
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h3>Sản phẩm trong kho</h3><p>Danh sách hàng hóa mới nhất</p></div>
+          <button class="primary" data-goto="products">Quản lý sản phẩm →</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>Mã sản phẩm</th><th>Tên sản phẩm</th><th>Danh mục</th>
+            <th>Tồn kho</th><th>Trạng thái</th>
+          </tr></thead><tbody id="dashboard-products"></tbody></table>
+        </div>
+      </section>
+    </section>
+
+    <section id="products-page" class="page hidden">
+      <section class="panel">
+        <div class="panel-heading">
+          <div><h3>Danh sách sản phẩm</h3><p>Thêm mới, chỉnh sửa và tìm kiếm hàng hóa.</p></div>
+          <button class="primary" id="add-product">＋ Thêm sản phẩm</button>
+        </div>
+        <div class="toolbar">
+          <input id="search" placeholder="Tìm theo mã hoặc tên sản phẩm...">
+          <button class="secondary" id="search-button">Tìm kiếm</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>Mã</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Đơn vị</th>
+            <th>Tồn kho</th><th>Giá nhập</th><th>Giá bán</th><th>Thao tác</th>
+          </tr></thead><tbody id="products-table"></tbody></table>
+        </div>
+      </section>
+    </section>
+
+    <section id="imports-page" class="page hidden">
+      <section class="panel form-panel">
+        <h3>Tạo phiếu nhập kho</h3>
+        <p>Ghi nhận hàng nhập và cập nhật tồn kho sau khi lưu phiếu.</p>
+        <form id="import-form">
+          <label>Mã phiếu nhập<input name="code" required placeholder="PN001"></label>
+          <label>Nhà cung cấp<select name="supplier_id" id="supplier-select" required></select></label>
+          <label>Sản phẩm<select name="product_id" class="product-select" required></select></label>
+          <label>Số lượng nhập<input name="quantity" type="number" min="1" required value="1"></label>
+          <label>Đơn giá nhập (VNĐ)<input name="unit_price" type="number" min="0" required value="0"></label>
+          <label>Ghi chú<input name="note" placeholder="Ghi chú (không bắt buộc)"></label>
+          <button class="primary" type="submit">Lưu phiếu nhập</button>
+        </form>
+      </section>
+    </section>
+
+    <section id="exports-page" class="page hidden">
+      <section class="panel form-panel">
+        <h3>Tạo phiếu xuất kho</h3>
+        <p>Hệ thống sẽ kiểm tra tồn kho trước khi xuất hàng.</p>
+        <form id="export-form">
+          <label>Mã phiếu xuất<input name="code" required placeholder="PX001"></label>
+          <label>Người nhận<input name="receiver" placeholder="Tên người nhận"></label>
+          <label>Sản phẩm<select name="product_id" class="product-select" required></select></label>
+          <label>Số lượng xuất<input name="quantity" type="number" min="1" required value="1"></label>
+          <label>Đơn giá xuất (VNĐ)<input name="unit_price" type="number" min="0" required value="0"></label>
+          <label>Ghi chú<input name="note" placeholder="Ghi chú (không bắt buộc)"></label>
+          <button class="primary" type="submit">Lưu phiếu xuất</button>
+        </form>
+      </section>
+    </section>
+
+    <section id="history-page" class="page hidden">
+      <section class="panel">
+        <div class="panel-heading"><div><h3>Lịch sử giao dịch</h3>
+          <p>100 dòng giao dịch gần nhất.</p></div></div>
+        <div class="table-wrap">
+          <table><thead><tr>
+            <th>Mã phiếu</th><th>Loại</th><th>Thời gian</th>
+            <th>Sản phẩm</th><th>Số lượng</th><th>Đơn giá</th>
+          </tr></thead><tbody id="history-table"></tbody></table>
+        </div>
+      </section>
+    </section>
+
+    <div id="message" class="message hidden" role="status"></div>
+    <footer>Inventory Management System · Flask + MySQL</footer>
+  </main>
+
+  <dialog id="product-dialog">
+    <form id="product-form">
+      <div class="dialog-heading"><h3 id="dialog-title">Thêm sản phẩm</h3>
+        <button type="button" id="close-dialog" class="close">×</button></div>
+      <input type="hidden" name="id">
+      <label>Mã sản phẩm<input name="code" required maxlength="50"></label>
+      <label>Tên sản phẩm<input name="name" required maxlength="150"></label>
+      <label>Danh mục<select name="category_id" id="category-select" required></select></label>
+      <label>Đơn vị<input name="unit" required placeholder="Cái, Hộp, Ram..."></label>
+      <label>Số lượng tồn<input name="quantity" type="number" min="0" required value="0"></label>
+      <label>Giá nhập<input name="import_price" type="number" min="0" step="0.01" required value="0"></label>
+      <label>Giá bán<input name="sale_price" type="number" min="0" step="0.01" required value="0"></label>
+      <label>Tồn tối thiểu<input name="min_stock" type="number" min="0" required value="0"></label>
+      <div class="dialog-actions"><button type="button" class="secondary" id="cancel-dialog">Hủy</button>
+        <button class="primary" type="submit">Lưu sản phẩm</button></div>
+    </form>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>
