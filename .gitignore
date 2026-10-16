@@ -36,3 +36,5 @@ __pycache__/
 
 # Database backups
 backups/
+# Dynamic disk monitoring metrics
+monitoring/node-exporter/textfile/disk.prom
