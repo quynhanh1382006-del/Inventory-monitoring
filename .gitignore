@@ -38,3 +38,19 @@ __pycache__/
 backups/
 # Dynamic disk monitoring metrics
 monitoring/node-exporter/textfile/disk.prom
+
+# Local backups and generated archives
+frontend-backup/
+inventory-monitoring-source.zip
+backups/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local environment secrets
+.env
+.env.*
+
+# Local monitoring files
+monitoring/node-exporter/
