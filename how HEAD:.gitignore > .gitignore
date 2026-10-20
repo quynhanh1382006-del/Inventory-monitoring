@@ -1,0 +1,48 @@
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex c4674a9..e8a4695 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -1,40 +1,3 @@[m
+[31m-# Java[m
+[31m-target/[m
+[31m-*.class[m
+[31m-*.jar[m
+[31m-[m
+[31m-# IDE[m
+[31m-.idea/[m
+[31m-.vscode/[m
+[31m-*.iml[m
+[31m-[m
+[31m-# Environment[m
+[31m-.env[m
+[31m-.env.*[m
+[31m-[m
+[31m-# Logs[m
+[31m-*.log[m
+[31m-logs/[m
+[31m-[m
+[31m-# OS[m
+[31m-.DS_Store[m
+[31m-Thumbs.db[m
+[31m-[m
+[31m-# Temporary[m
+[31m-tmp/[m
+[31m-temp/[m
+[31m-[m
+[31m-# Docker[m
+[31m-docker-data/[m
+[31m-[m
+[31m-# Generated files[m
+[31m-reports/generated/[m
+[31m-[m
+[31m-# Python[m
+[31m-__pycache__/[m
+[31m-*.py[cod][m
+[31m-[m
+[31m-# Database backups[m
+[31m-backups/[m
+[31m-# Dynamic disk monitoring metrics[m
+[31m-monitoring/node-exporter/textfile/disk.prom[m
+[32m+[m[32m# Local backups and generated archives[m
+[32m+[m[32mfrontend-backup/[m
+[32m+[m[32minventory-monitoring-source.zip[m

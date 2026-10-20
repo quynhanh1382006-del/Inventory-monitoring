@@ -1,18 +1,30 @@
 import os
 from decimal import Decimal
-
 import pymysql
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, session
 from pymysql.cursors import DictCursor
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 FRONTEND_DIR = os.getenv(
     "FRONTEND_DIR",
     os.path.abspath(os.path.join(BASE_DIR, "..", "frontend")),
 )
 
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path="")
+app.secret_key = os.environ.get(
+    "FLASK_SECRET_KEY",
+    "dev-only-change-this-secret"
+)
 
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE") == "1",
+)
 
 def get_db():
     return pymysql.connect(
@@ -55,8 +67,147 @@ def error(message, status=400):
 
 @app.get("/")
 def index():
+    if "user_id" not in session:
+        return send_from_directory(app.static_folder, "login.html")
     return send_from_directory(app.static_folder, "index.html")
 
+
+
+
+
+@app.post("/api/register")
+def register():
+    data = request.get_json(silent=True) or {}
+
+    username = data.get("username", "").strip()
+    full_name = data.get("full_name", "").strip()
+    password = data.get("password", "")
+
+    if len(username) < 3 or len(username) > 50:
+        return error("Tên đăng nhập phải có từ 3 đến 50 ký tự")
+
+    if not full_name:
+        return error("Vui lòng nhập họ và tên")
+
+    if len(password) < 8:
+        return error("Mật khẩu phải có ít nhất 8 ký tự")
+
+    try:
+        with get_db() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id FROM users WHERE username = %s",
+                    (username,)
+                )
+                if cursor.fetchone():
+                    return error("Tên đăng nhập đã tồn tại")
+
+                cursor.execute(
+                    """
+                    INSERT INTO users (username, password, full_name, role)
+                    VALUES (%s, %s, %s, 'STAFF')
+                    """,
+                    (
+                        username,
+                        generate_password_hash(password),
+                        full_name
+                    )
+                )
+            conn.commit()
+
+        return jsonify({"message": "Đăng ký thành công"}), 201
+    except Exception:
+        return error("Không thể đăng ký. Vui lòng kiểm tra kết nối cơ sở dữ liệu", 500)
+
+
+@app.post("/api/login")
+def login():
+    data = request.get_json(silent=True) or {}
+
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+
+    user = query_one(
+        """
+        SELECT id, username, password, full_name, role
+        FROM users
+        WHERE username = %s
+        """,
+        (username,)
+    )
+
+    if not user:
+        return error("Tên đăng nhập hoặc mật khẩu không đúng", 401)
+
+    stored_password = user["password"]
+
+    try:
+        valid = check_password_hash(stored_password, password)
+    except (ValueError, TypeError):
+        valid = False
+
+    # Hỗ trợ tài khoản cũ đang lưu mật khẩu dạng văn bản thường.
+    if not valid and stored_password == password:
+        valid = True
+        with get_db() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET password = %s WHERE id = %s",
+                    (generate_password_hash(password), user["id"])
+                )
+            conn.commit()
+
+    if not valid:
+        return error("Tên đăng nhập hoặc mật khẩu không đúng", 401)
+
+    session.clear()
+    session["user_id"] = user["id"]
+    session["username"] = user["username"]
+    session["full_name"] = user["full_name"]
+    session["role"] = user["role"]
+
+    return jsonify({
+        "message": "Đăng nhập thành công",
+        "user": {
+            "username": user["username"],
+            "full_name": user["full_name"],
+            "role": user["role"]
+        }
+    })
+
+
+@app.get("/api/me")
+def current_user():
+    if "user_id" not in session:
+        return error("Bạn chưa đăng nhập", 401)
+
+    return jsonify({
+        "user": {
+            "username": session["username"],
+            "full_name": session["full_name"],
+            "role": session["role"]
+        }
+    })
+
+
+@app.post("/api/logout")
+def logout():
+    session.clear()
+    return jsonify({"message": "Đăng xuất thành công"})
+@app.before_request
+def require_login():
+    public_endpoints = {
+        "index",
+        "health",
+        "register",
+        "login",
+        "current_user",
+        "logout",
+    }
+
+    if request.path.startswith("/api/") and request.endpoint not in public_endpoints:
+        if "user_id" not in session:
+            return error("Vui lòng đăng nhập để tiếp tục", 401)
 
 @app.get("/api/health")
 def health():

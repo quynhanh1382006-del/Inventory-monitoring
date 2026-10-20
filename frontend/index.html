@@ -155,8 +155,13 @@
       <label>Danh mục<select name="category_id" id="category-select" required></select></label>
       <label>Đơn vị<input name="unit" required placeholder="Cái, Hộp, Ram..."></label>
       <label>Số lượng tồn<input name="quantity" type="number" min="0" required value="0"></label>
-      <label>Giá nhập<input name="import_price" type="number" min="0" step="0.01" required value="0"></label>
-      <label>Giá bán<input name="sale_price" type="number" min="0" step="0.01" required value="0"></label>
+      <label>Giá nhập (VNĐ)
+  <input name="import_price" type="text" inputmode="numeric" pattern="[0-9.,]*" required value="0">
+</label>
+
+<label>Giá bán (VNĐ)
+  <input name="sale_price" type="text" inputmode="numeric" pattern="[0-9.,]*" required value="0">
+</label>
       <label>Tồn tối thiểu<input name="min_stock" type="number" min="0" required value="0"></label>
       <div class="dialog-actions"><button type="button" class="secondary" id="cancel-dialog">Hủy</button>
         <button class="primary" type="submit">Lưu sản phẩm</button></div>

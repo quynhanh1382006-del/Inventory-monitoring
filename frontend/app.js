@@ -179,12 +179,21 @@ $("#product-form").addEventListener("submit", async event => {
   const data = formObject(form);
   const id = data.id;
   delete data.id;
-  for (const key of ["category_id", "quantity", "min_stock"]) {
-    data[key] = Number(data[key]);
+for (const key of ["import_price", "sale_price"]) {
+  const raw = String(data[key] ?? "").trim();
+
+  if (!/^\d[\d.,]*$/.test(raw)) {
+    showMessage("Vui lòng nhập giá tiền hợp lệ", true);
+    return;
   }
-  for (const key of ["import_price", "sale_price"]) {
-    data[key] = Number(data[key]);
+
+  data[key] = Number(raw.replace(/[.,]/g, ""));
+
+  if (!Number.isFinite(data[key]) || data[key] < 0) {
+    showMessage("Giá tiền không hợp lệ", true);
+    return;
   }
+}
 
   try {
     await api(id ? `/api/products/${id}` : "/api/products", {

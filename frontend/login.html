@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Quản lý kho</title>
+    <link rel="stylesheet" href="/auth.css">
+</head>
+<body>
+    <main class="auth-container">
+        <section class="auth-card">
+            <div class="auth-icon">📦</div>
+            <h1>QUẢN LÝ KHO HÀNG</h1>
+            <p class="subtitle">Đăng nhập để tiếp tục</p>
+
+            <div id="message" class="message" role="alert"></div>
+
+            <form id="login-form">
+                <label for="login-username">Tên đăng nhập</label>
+                <input id="login-username" name="username"
+                       type="text" required minlength="3"
+                       autocomplete="username">
+
+                <label for="login-password">Mật khẩu</label>
+                <input id="login-password" name="password"
+                       type="password" required
+                       autocomplete="current-password">
+
+                <button type="submit">Đăng nhập</button>
+            </form>
+
+            <div class="switch">
+                Chưa có tài khoản?
+                <button type="button" id="show-register">Đăng ký</button>
+            </div>
+
+            <form id="register-form" hidden>
+                <h2>Tạo tài khoản</h2>
+
+                <label for="register-fullname">Họ và tên</label>
+                <input id="register-fullname" name="full_name"
+                       type="text" required autocomplete="name">
+
+                <label for="register-username">Tên đăng nhập</label>
+                <input id="register-username" name="username"
+                       type="text" required minlength="3" maxlength="50"
+                       autocomplete="username">
+
+                <label for="register-password">Mật khẩu (ít nhất 8 ký tự)</label>
+                <input id="register-password" name="password"
+                       type="password" required minlength="8"
+                       autocomplete="new-password">
+
+                <button type="submit">Tạo tài khoản</button>
+                <div class="switch">
+                    Đã có tài khoản?
+                    <button type="button" id="show-login">Đăng nhập</button>
+                </div>
+            </form>
+        </section>
+    </main>
+    <script src="/auth.js"></script>
+</body>
+</html>
