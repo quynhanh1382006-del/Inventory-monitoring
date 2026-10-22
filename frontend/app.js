@@ -41,9 +41,9 @@ function escapeHtml(value) {
 function emptyRow(columns, message = "Chưa có dữ liệu") {
   return `<tr><td colspan="${columns}">${escapeHtml(message)}</td></tr>`;
 }
-
 async function loadDashboard() {
   const data = await api("/api/dashboard");
+
   $("#total-products").textContent = data.total_products;
   $("#total-quantity").textContent =
     Number(data.total_quantity).toLocaleString("vi-VN");
@@ -51,23 +51,59 @@ async function loadDashboard() {
   $("#stock-value").textContent = money(data.stock_value);
 
   const products = await api("/api/products");
-  $("#dashboard-products").innerHTML = products.slice(0, 8).map(p => `
-    <tr>
-      <td>${escapeHtml(p.code)}</td>
-      <td>${escapeHtml(p.name)}</td>
-      <td>${escapeHtml(p.category_name)}</td>
-      <td>${Number(p.quantity).toLocaleString("vi-VN")} ${escapeHtml(p.unit)}</td>
-      <td><span class="pill ${p.quantity <= p.min_stock ? "warning" : ""}">
-        ${p.quantity <= p.min_stock ? "Sắp hết hàng" : "Còn hàng"}
-      </span></td>
-    </tr>`).join("") || emptyRow(5);
+
+  $("#dashboard-products").innerHTML =
+    products.slice(0, 8).map(p => {
+      const isLow = Number(p.quantity) <= Number(p.min_stock);
+
+      return `
+        <tr>
+          <td>${escapeHtml(p.code)}</td>
+          <td>${escapeHtml(p.name)}</td>
+          <td>${escapeHtml(p.category_name)}</td>
+          <td>${Number(p.quantity).toLocaleString("vi-VN")}
+              ${escapeHtml(p.unit)}</td>
+          <td>
+            <span class="pill ${isLow ? "warning" : ""}">
+              ${isLow ? "Sắp hết hàng" : "Còn hàng"}
+            </span>
+          </td>
+        </tr>`;
+    }).join("") || emptyRow(5);
+
+  const lowStockProducts = products.filter(
+    p => Number(p.quantity) <= Number(p.min_stock)
+  );
+
+  $("#low-stock-products").innerHTML =
+  lowStockProducts.map(p => {
+    const quantity = Number(p.quantity);
+    const minStock = Number(p.min_stock);
+    const needed = Math.max(0, minStock - quantity);
+
+    return `
+      <tr>
+        <td>${escapeHtml(p.code)}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td>${quantity.toLocaleString("vi-VN")}
+            ${escapeHtml(p.unit)}</td>
+        <td>${minStock.toLocaleString("vi-VN")}
+            ${escapeHtml(p.unit)}</td>
+        <td>
+          <strong>${needed.toLocaleString("vi-VN")}
+            ${escapeHtml(p.unit)}</strong>
+        </td>
+        <td>
+          <span class="pill warning">Cần kiểm tra</span>
+        </td>
+      </tr>
+    `;
+  }).join("") || emptyRow(6, "Không có sản phẩm sắp hết hàng");
 }
 
 async function loadProducts(keyword = "") {
   productsCache = await api(`/api/products?q=${encodeURIComponent(keyword)}`);
-  $("#products-table").innerHTML = productsCache.map(p => `
-    <tr>
-      <td>${escapeHtml(p.code)}</td>
+  $("#products-table").innerHTML = productsCache.map(p => `    <tr>      <td>${escapeHtml(p.code)}</td>
       <td>${escapeHtml(p.name)}</td>
       <td>${escapeHtml(p.category_name)}</td>
       <td>${escapeHtml(p.unit)}</td>
@@ -105,18 +141,68 @@ async function loadSuppliers() {
   ).join("");
 }
 
+
 async function loadHistory() {
-  const rows = await api("/api/history");
+  const params = new URLSearchParams();
+const type = $("#history-type")?.value || "all";
+const from = $("#history-from")?.value || "";
+const to = $("#history-to")?.value || "";
+
+params.set("type", type === "Nhập kho" ? "import" :
+                    type === "Xuất kho" ? "export" : "all");
+
+if (from) params.set("start_date", from);
+if (to) params.set("end_date", to);
+  const query = params.toString();
+  const rows = await api(
+    "/api/history" + (query ? `?${query}` : "")
+  );
+
   $("#history-table").innerHTML = rows.map(row => `
     <tr>
       <td>${escapeHtml(row.code)}</td>
-      <td><span class="pill ${row.type === "Xuất kho" ? "warning" : ""}">${escapeHtml(row.type)}</span></td>
+      <td>
+        <span class="pill ${row.type === "Xuất kho" ? "warning" : ""}">
+          ${escapeHtml(row.type)}
+        </span>
+      </td>
       <td>${escapeHtml(row.created_at)}</td>
       <td>${escapeHtml(row.product_name)}</td>
       <td>${Number(row.quantity).toLocaleString("vi-VN")}</td>
       <td>${money(row.unit_price)}</td>
-    </tr>`).join("") || emptyRow(6, "Chưa có giao dịch");
+    </tr>
+  `).join("") || emptyRow(6, "Không có giao dịch phù hợp");
 }
+
+$("#history-filter")?.addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const from = $("#history-from").value;
+  const to = $("#history-to").value;
+
+  if (from && to && from > to) {
+    alert("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
+    return;
+  }
+
+  try {
+    await loadHistory();
+  } catch (error) {
+    console.error(error);
+    alert("Không tải được lịch sử giao dịch. Vui lòng thử lại.");
+  }
+});
+
+$("#history-reset")?.addEventListener("click", async () => {
+  $("#history-filter").reset();
+
+  try {
+    await loadHistory();
+  } catch (error) {
+    console.error(error);
+    alert("Không tải được lịch sử giao dịch. Vui lòng thử lại.");
+  }
+});
 
 const titles = {
   dashboard: "Tổng quan",
@@ -312,3 +398,22 @@ async function init() {
 }
 
 init();
+const logoutButton = document.getElementById("logout-button");
+
+if (logoutButton) {
+    logoutButton.addEventListener("click", async () => {
+        try {
+            const response = await fetch("/api/logout", {
+                method: "POST"
+            });
+
+            if (!response.ok) {
+                throw new Error("Không thể đăng xuất");
+            }
+
+            window.location.href = "/";
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+}

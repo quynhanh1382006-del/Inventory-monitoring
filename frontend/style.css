@@ -103,3 +103,27 @@ footer { padding: 25px 0 10px; color: #8994a5; font-size: 11px; text-align: cent
   .panel { padding: 15px; }
   .panel-heading { align-items: flex-start; flex-direction: column; }
 }
+.panel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.panel-heading > button,
+.panel-heading > a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.panel-heading > a.secondary {
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #e8f0ff;
+    color: #1d4ed8;
+    font-weight: 600;
+}

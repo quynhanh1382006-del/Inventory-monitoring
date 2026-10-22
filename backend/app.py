@@ -487,27 +487,140 @@ def create_export():
     return process_receipt("export", request.get_json(silent=True) or {})
 
 
+
 @app.get("/api/history")
 def history():
-    rows = query_all("""
-        SELECT r.code, 'Nhập kho' AS type, r.import_date AS created_at,
-               p.name AS product_name, d.quantity, d.unit_price
-        FROM import_receipts r
-        JOIN import_details d ON d.import_receipt_id = r.id
-        JOIN products p ON p.id = d.product_id
-        UNION ALL
-        SELECT r.code, 'Xuất kho' AS type, r.export_date AS created_at,
-               p.name AS product_name, d.quantity, d.unit_price
-        FROM export_receipts r
-        JOIN export_details d ON d.export_receipt_id = r.id
-        JOIN products p ON p.id = d.product_id
-        ORDER BY created_at DESC
-        LIMIT 100
-    """)
+    transaction_type = request.args.get("type", "all").strip().lower()
+    start_date = request.args.get("start_date", "").strip()
+    end_date = request.args.get("end_date", "").strip()
+
+    if transaction_type not in ("all", "import", "export"):
+        return error("Loại giao dịch không hợp lệ")
+
+    if start_date and end_date and start_date > end_date:
+        return error("Ngày bắt đầu không được sau ngày kết thúc")
+
+    conditions_import = []
+    conditions_export = []
+    params_import = []
+    params_export = []
+
+    if start_date:
+        conditions_import.append("r.import_date >= %s")
+        conditions_export.append("r.export_date >= %s")
+        params_import.append(start_date + " 00:00:00")
+        params_export.append(start_date + " 00:00:00")
+
+    if end_date:
+        conditions_import.append("r.import_date < DATE_ADD(%s, INTERVAL 1 DAY)")
+        conditions_export.append("r.export_date < DATE_ADD(%s, INTERVAL 1 DAY)")
+        params_import.append(end_date)
+        params_export.append(end_date)
+
+    import_where = (
+        " WHERE " + " AND ".join(conditions_import)
+        if conditions_import else ""
+    )
+    export_where = (
+        " WHERE " + " AND ".join(conditions_export)
+        if conditions_export else ""
+    )
+
+    queries = []
+    params = []
+
+    if transaction_type in ("all", "import"):
+        queries.append(f"""
+            SELECT r.code, 'Nhập kho' AS type,
+                   r.import_date AS created_at,
+                   p.name AS product_name, d.quantity, d.unit_price
+            FROM import_receipts r
+            JOIN import_details d ON d.import_receipt_id = r.id
+            JOIN products p ON p.id = d.product_id
+            {import_where}
+        """)
+        params.extend(params_import)
+
+    if transaction_type in ("all", "export"):
+        queries.append(f"""
+            SELECT r.code, 'Xuất kho' AS type,
+                   r.export_date AS created_at,
+                   p.name AS product_name, d.quantity, d.unit_price
+            FROM export_receipts r
+            JOIN export_details d ON d.export_receipt_id = r.id
+            JOIN products p ON p.id = d.product_id
+            {export_where}
+        """)
+        params.extend(params_export)
+
+    sql = (
+        " UNION ALL ".join(queries)
+        + " ORDER BY created_at DESC LIMIT 500"
+    )
+
+    rows = query_all(sql, tuple(params))
     return jsonify(rows)
 
 
-@app.errorhandler(404)
+
+@app.get("/api/reports/inventory.csv")
+def export_inventory_report():
+    import csv
+    import io
+    from flask import Response
+
+    rows = query_all("""
+        SELECT
+            code,
+            name,
+            unit,
+            quantity,
+            min_stock,
+            import_price,
+            quantity * import_price AS stock_value,
+            CASE
+                WHEN quantity <= min_stock THEN 'Can kiem tra'
+                ELSE 'Binh thuong'
+            END AS stock_status
+        FROM products
+        ORDER BY name ASC
+    """)
+
+    output = io.StringIO(newline="")
+    output.write("\ufeff")
+
+    writer = csv.writer(output)
+    writer.writerow([
+        "Ma san pham",
+        "Ten san pham",
+        "Don vi",
+        "So luong ton",
+        "Muc ton toi thieu",
+        "Gia nhap",
+        "Gia tri ton kho",
+        "Trang thai"
+    ])
+
+    for row in rows:
+        writer.writerow([
+            row["code"],
+            row["name"],
+            row["unit"],
+            row["quantity"],
+            row["min_stock"],
+            row["import_price"],
+            row["stock_value"],
+            row["stock_status"]
+        ])
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition":
+                "attachment; filename=bao_cao_ton_kho.csv"
+        }
+    )
 def not_found(exc):
     if request.path.startswith("/api/"):
         return error("Không tìm thấy API", 404)
